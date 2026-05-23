@@ -6,3 +6,16 @@
 
 # Ignore a particular folder
 data/
+
+# Python compiled files
+__pycache__/
+*.pyc
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+
+# Temp files
+tmp/

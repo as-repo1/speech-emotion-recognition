@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  voxsense:
+    build: .
+    container_name: voxsense_app
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      # Exclude local virtual environments and caches from docker mount to prevent pollution
+      - /app/.venv
+      - /app/__pycache__
+    environment:
+      - FLASK_ENV=development
+      - PYTHONUNBUFFERED=1
+    restart: always

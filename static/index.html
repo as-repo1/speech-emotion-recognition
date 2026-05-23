@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="VoxSense - Decode emotions from speech using state-of-the-art Deep Learning models. Run real-time predictions or upload files.">
+    <title>VoxSense — Speech Emotion Recognition</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main Style Sheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background Blur Decorative Elements -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <i class="fa-solid fa-waveform-lines logo-icon"></i>
+                <h1 id="app-title">Vox<span>Sense</span></h1>
+            </div>
+            <p class="tagline">Decode emotional patterns from human speech using advanced neural models</p>
+        </header>
+
+        <!-- Main Layout Grid -->
+        <main class="app-grid">
+            <!-- Left Panel: Input & Settings -->
+            <section class="panel-left">
+                <!-- Model Selection Card -->
+                <div class="glass-card card-settings">
+                    <h2 class="card-title"><i class="fa-solid fa-sliders-up"></i> Neural Network Model</h2>
+                    <p class="card-subtitle">Choose the model architecture for inference</p>
+                    <div class="model-pills" id="model-selector">
+                        <button class="model-pill active" id="btn-model-wav2vec2" data-model="wav2vec2">
+                            <span class="pill-title">Wav2Vec2</span>
+                            <span class="pill-desc">SOTA Transformer</span>
+                        </button>
+                        <button class="model-pill" id="btn-model-lstm" data-model="lstm">
+                            <span class="pill-title">LSTM</span>
+                            <span class="pill-desc">Recurrent Network</span>
+                        </button>
+                        <button class="model-pill" id="btn-model-cnn" data-model="cnn">
+                            <span class="pill-title">CNN</span>
+                            <span class="pill-desc">Convolutional 1D</span>
+                        </button>
+                        <button class="model-pill" id="btn-model-mlp" data-model="mlp">
+                            <span class="pill-title">MLP</span>
+                            <span class="pill-desc">Multi-Layer Baseline</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Input Methods Tab Card -->
+                <div class="glass-card card-input">
+                    <div class="tab-headers">
+                        <button class="tab-header active" id="tab-upload-header" onclick="switchTab('upload')">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Upload Audio
+                        </button>
+                        <button class="tab-header" id="tab-record-header" onclick="switchTab('record')">
+                            <i class="fa-solid fa-microphone"></i> Record Speech
+                        </button>
+                    </div>
+
+                    <!-- Upload Tab -->
+                    <div class="tab-content active" id="tab-upload">
+                        <div class="upload-zone" id="drop-zone">
+                            <input type="file" id="file-input" accept=".wav,.mp3,.ogg,.flac" hidden>
+                            <div class="upload-icon-wrapper">
+                                <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                            </div>
+                            <h3>Drag & Drop speech file</h3>
+                            <p>or <span class="browse-link">browse files</span> from device</p>
+                            <span class="supported-formats">Supports WAV, MP3, OGG, FLAC</span>
+                        </div>
+                    </div>
+
+                    <!-- Record Tab -->
+                    <div class="tab-content" id="tab-record">
+                        <div class="record-zone">
+                            <div class="mic-circle" id="mic-status-circle">
+                                <i class="fa-solid fa-microphone record-icon" id="mic-icon"></i>
+                                <div class="pulse-ring"></div>
+                            </div>
+                            <div class="record-meta">
+                                <span class="record-status" id="record-status-text">Ready to Record</span>
+                                <span class="record-timer" id="record-timer">00:00</span>
+                            </div>
+                            
+                            <!-- Real-time Stream Toggle Switch -->
+                            <div class="stream-toggle-container">
+                                <label class="switch">
+                                    <input type="checkbox" id="chk-realtime-stream">
+                                    <span class="slider round"></span>
+                                </label>
+                                <span class="stream-toggle-label"><i class="fa-solid fa-tower-broadcast"></i> Real-time Live Tracking</span>
+                            </div>
+
+                            <div class="record-controls">
+                                <button class="btn btn-record" id="btn-record-toggle">
+                                    <i class="fa-solid fa-play"></i> Start Recording
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Shared Audio Preview Section -->
+                    <div class="audio-preview-container hidden" id="preview-container">
+                        <div class="preview-header">
+                            <span class="preview-filename" id="preview-filename">file.wav</span>
+                            <button class="btn-clear" id="btn-clear-audio" title="Clear Audio">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <audio id="audio-player" controls></audio>
+                        <button class="btn btn-primary btn-analyze" id="btn-analyze">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Analyze Speech Emotion
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Results Dashboard -->
+            <section class="panel-right">
+                <!-- Result Display Card -->
+                <div class="glass-card card-result empty" id="result-card">
+                    <!-- Idle State View -->
+                    <div class="result-idle" id="result-idle-view">
+                        <div class="idle-icon-wrapper">
+                            <i class="fa-solid fa-chart-simple-waveform idle-icon"></i>
+                        </div>
+                        <h2>Awaiting Audio Analysis</h2>
+                        <p>Upload a file or record audio on the left side to extract emotional analytics</p>
+                    </div>
+
+                    <!-- Loading State View -->
+                    <div class="result-loading hidden" id="result-loading-view">
+                        <div class="spinner-container">
+                            <div class="spinner"></div>
+                            <div class="spinner-glow"></div>
+                        </div>
+                        <h2>Extracting Features...</h2>
+                        <p id="loading-status-text">Running inference on selected neural architecture</p>
+                    </div>
+
+                    <!-- Successful Prediction View -->
+                    <div class="result-content hidden" id="result-content-view">
+                        <div class="primary-prediction">
+                            <div class="emotion-emoji-badge" id="primary-emoji">😐</div>
+                            <div class="prediction-info">
+                                <span class="prediction-tag">Detected Emotion</span>
+                                <h2 class="emotion-label" id="primary-emotion">Neutral</h2>
+                                <div class="confidence-badge">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                    <span id="primary-confidence">98.5% Confidence</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Static Waveform Visualizer -->
+                        <div class="waveform-box" id="waveform-box">
+                            <span class="waveform-tag">Audio Signature</span>
+                            <canvas id="waveform-canvas" width="450" height="80"></canvas>
+                        </div>
+
+                        <!-- Real-time Emotion Timeline -->
+                        <div class="waveform-box hidden" id="timeline-box">
+                            <span class="waveform-tag">Real-time Emotion Timeline</span>
+                            <div class="timeline-ticks" id="timeline-chart"></div>
+                        </div>
+
+                        <!-- Confidence Bar Grid -->
+                        <div class="emotion-bars-container">
+                            <span class="waveform-tag">Probability Distribution</span>
+                            <div class="emotion-bars" id="emotion-bars-list">
+                                <!-- Bars will be dynamically generated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Prediction Metadata -->
+                        <div class="result-metadata">
+                            <span><i class="fa-solid fa-microchip"></i> Engine: <strong id="meta-model-used">LSTM</strong></span>
+                            <span><i class="fa-solid fa-clock"></i> Timestamp: <strong id="meta-time">Just now</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom Section: History Sidebar/Drawer -->
+        <section class="glass-card card-history">
+            <div class="history-header">
+                <h2><i class="fa-solid fa-clock-rotate-left"></i> Session History</h2>
+                <button class="btn-text" id="btn-clear-history">Clear History</button>
+            </div>
+            <div class="history-empty" id="history-empty-text">No runs in this session yet</div>
+            <div class="history-list" id="history-list"></div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>VoxSense &copy; 2026 &bull; Speech Emotion Recognition Suite</p>
+        </footer>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
