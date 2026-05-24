@@ -154,6 +154,9 @@ Docker simplifies environment setup by automatically encapsulating system packag
 
 ## 📱 Local Android Application (VoxSense)
 
+> [!TIP]
+> **Direct Download**: Get the pre-built application binary directly: **[voxsense-v1.0.0.apk](voxsense-v1.0.0.apk)**. Copy it to your Android device to install and use it immediately without setting up compiler tools.
+
 VoxSense includes a fully local Android application in the `android-app/` directory. It implements Speech Emotion Recognition entirely on-device, requiring **no internet connection or external server requests**.
 
 ### How It Works (Android Pipeline)
