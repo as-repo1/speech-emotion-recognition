@@ -39,6 +39,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -99,9 +101,22 @@ fun MainScreen(
         hasMicPermission = isGranted
     }
 
+    val Nord0 = MaterialTheme.colorScheme.background
+    val Nord1 = MaterialTheme.colorScheme.surfaceVariant
+    val Nord2 = MaterialTheme.colorScheme.outline
+    val Nord3 = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+    val Nord4 = MaterialTheme.colorScheme.onSurfaceVariant
+    val Nord5 = MaterialTheme.colorScheme.onSurface
+    val Nord6 = MaterialTheme.colorScheme.onSurface
+    val Nord7 = MaterialTheme.colorScheme.secondary
+    val Nord8 = MaterialTheme.colorScheme.primary
+    val Nord9 = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+    val Nord10 = MaterialTheme.colorScheme.primaryContainer
+    val Nord11 = MaterialTheme.colorScheme.error
+
     // Nord Background Gradient (Polar Night tone)
     val backgroundGradient = Brush.verticalGradient(
-        colors = listOf(Nord0, Color(0xFF1E222B))
+        colors = listOf(Nord0, MaterialTheme.colorScheme.surfaceVariant)
     )
 
     Box(
@@ -198,7 +213,61 @@ fun MainScreenContent(
     onToggleNoiseGate: () -> Unit,
     onSetRecordingLimit: (Int?) -> Unit
 ) {
+    val Nord0 = MaterialTheme.colorScheme.background
+    val Nord1 = MaterialTheme.colorScheme.surfaceVariant
+    val Nord2 = MaterialTheme.colorScheme.outline
+    val Nord3 = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+    val Nord4 = MaterialTheme.colorScheme.onSurfaceVariant
+    val Nord5 = MaterialTheme.colorScheme.onSurface
+    val Nord6 = MaterialTheme.colorScheme.onSurface
+    val Nord7 = MaterialTheme.colorScheme.secondary
+    val Nord8 = MaterialTheme.colorScheme.primary
+    val Nord9 = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+    val Nord10 = MaterialTheme.colorScheme.primaryContainer
+    val Nord11 = MaterialTheme.colorScheme.error
+
     var settingsExpanded by remember { mutableStateOf(false) }
+
+    if (isProcessing) {
+        Dialog(
+            onDismissRequest = {},
+            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(175.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Analyzing Speech...",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Extracting acoustic features",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 10.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -817,6 +886,8 @@ fun NordCard(
     shape: RoundedCornerShape = RoundedCornerShape(14.dp),
     content: @Composable () -> Unit
 ) {
+    val Nord1 = MaterialTheme.colorScheme.surfaceVariant
+    val Nord2 = MaterialTheme.colorScheme.outline
     Box(
         modifier = modifier
             .clip(shape)
@@ -835,6 +906,11 @@ fun NordChoiceChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val Nord0 = MaterialTheme.colorScheme.background
+    val Nord2 = MaterialTheme.colorScheme.surfaceVariant
+    val Nord3 = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+    val Nord4 = MaterialTheme.colorScheme.onSurfaceVariant
+    val Nord8 = MaterialTheme.colorScheme.primary
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(18.dp))
@@ -860,6 +936,9 @@ fun NordEmotionToggleChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val Nord2 = MaterialTheme.colorScheme.surfaceVariant
+    val Nord4 = MaterialTheme.colorScheme.onSurfaceVariant
+    val Nord6 = MaterialTheme.colorScheme.onSurface
     val color = getEmotionColor(emotion)
     val emoji = getEmotionEmoji(emotion)
     Box(
@@ -892,6 +971,12 @@ fun NordRecordButton(
     isProcessing: Boolean,
     onClick: () -> Unit
 ) {
+    val Nord0 = MaterialTheme.colorScheme.background
+    val Nord3 = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+    val Nord6 = MaterialTheme.colorScheme.onSurface
+    val Nord8 = MaterialTheme.colorScheme.primary
+    val Nord11 = MaterialTheme.colorScheme.error
+
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val glowSize by if (isRecording) {
         infiniteTransition.animateFloat(
@@ -942,6 +1027,9 @@ fun NordEmotionBar(
     value: Float,
     color: Color
 ) {
+    val Nord2 = MaterialTheme.colorScheme.surfaceVariant
+    val Nord4 = MaterialTheme.colorScheme.onSurface
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -989,6 +1077,9 @@ fun NordWaveformVisualizer(
     isActive: Boolean,
     amplitude: Float
 ) {
+    val Nord8 = MaterialTheme.colorScheme.primary
+    val Nord15 = MaterialTheme.colorScheme.secondary
+
     val infiniteTransition = rememberInfiniteTransition(label = "waveAnim")
     val phase by infiniteTransition.animateFloat(
         initialValue = 0f,
