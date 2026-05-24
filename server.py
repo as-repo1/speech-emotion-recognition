@@ -3,7 +3,7 @@ import tempfile
 import numpy as np
 import librosa
 import soundfile as sf
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import joblib
 from tensorflow.keras.models import load_model
@@ -28,48 +28,129 @@ label_mapper = {
     'sur': 'surprised', 'surprise': 'surprised', 'surprised': 'surprised'
 }
 
+import subprocess
+import requests
+
 # Load models and label encoder
 models = {}
 label_encoder = None
 
-# 1. Load LSTM
-lstm_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_lstm_model.h5")
-if os.path.exists(lstm_path):
+def get_github_remote_info():
     try:
-        models["lstm"] = load_model(lstm_path)
-        print("Loaded LSTM model successfully.")
-    except Exception as e:
-        print(f"Error loading LSTM model: {e}")
+        res = subprocess.check_output(["git", "remote", "get-url", "origin"], stderr=subprocess.DEVNULL)
+        url = res.decode("utf-8").strip()
+        if "github.com" in url:
+            parts = url.split("github.com/")[-1].replace(".git", "").split("/")
+            if len(parts) >= 2:
+                return parts[0], parts[1]
+    except Exception:
+        pass
+    return "as-repo1", "speech-emotion-recognition"
 
-# 2. Load CNN
-cnn_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_cnn_model.h5")
-if os.path.exists(cnn_path):
-    try:
-        models["cnn"] = load_model(cnn_path)
-        print("Loaded CNN model successfully.")
-    except Exception as e:
-        print(f"Error loading CNN model: {e}")
+username, repo = get_github_remote_info()
 
-# 3. Load MLP (scikit-learn)
-mlp_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_model.pkl")
-if os.path.exists(mlp_path):
-    try:
-        models["mlp"] = joblib.load(mlp_path)
-        print("Loaded MLP model successfully.")
-    except Exception as e:
-        print(f"Error loading MLP model: {e}")
+AVAILABLE_MODELS = {
+    "cnn": {
+        "id": "cnn",
+        "name": "CNN (RAVDESS + TESS)",
+        "description": "1D Convolutional Neural Network. Trained on combined dataset. Fast and balanced.",
+        "size": "975 KB",
+        "filename": "speech_emotion_recognition_cnn_model.h5",
+        "url": f"https://raw.githubusercontent.com/{username}/{repo}/main/models/speech_emotion_recognition_cnn_model.h5"
+    },
+    "lstm": {
+        "id": "lstm",
+        "name": "LSTM (RAVDESS + TESS)",
+        "description": "Recurrent LSTM model. Trained on combined dataset. Good temporal analysis.",
+        "size": "491 KB",
+        "filename": "speech_emotion_recognition_lstm_model.h5",
+        "url": f"https://raw.githubusercontent.com/{username}/{repo}/main/models/speech_emotion_recognition_lstm_model.h5"
+    },
+    "crnn": {
+        "id": "crnn",
+        "name": "CRNN (RAVDESS + TESS)",
+        "description": "Convolutional Recurrent Neural Network. Combines spatial and sequential features. Most sophisticated.",
+        "size": "323 KB",
+        "filename": "speech_emotion_recognition_crnn_model.h5",
+        "url": f"https://raw.githubusercontent.com/{username}/{repo}/main/models/speech_emotion_recognition_crnn_model.h5"
+    },
+    "mlp": {
+        "id": "mlp",
+        "name": "MLP (RAVDESS + TESS)",
+        "description": "Multi-Layer Perceptron baseline. Very lightweight and quick.",
+        "size": "703 KB",
+        "filename": "speech_emotion_recognition_model.pkl",
+        "url": f"https://raw.githubusercontent.com/{username}/{repo}/main/models/speech_emotion_recognition_model.pkl"
+    },
+    "wav2vec2": {
+        "id": "wav2vec2",
+        "name": "Wav2Vec2 (Hugging Face)",
+        "description": "State-of-the-art transformer model loaded dynamically from HuggingFace.",
+        "size": "380 MB",
+        "filename": "harshit345/xlsr-wav2vec-speech-emotion-recognition",
+        "url": ""
+    }
+}
 
-# 4. Load Wav2Vec2 (Hugging Face)
-try:
-    print("Loading state-of-the-art Wav2Vec2 transformer model...")
-    # Loading harshit345/xlsr-wav2vec-speech-emotion-recognition (fine-tuned on RAVDESS)
-    models["wav2vec2"] = pipeline(
-        "audio-classification", 
-        model="harshit345/xlsr-wav2vec-speech-emotion-recognition"
-    )
-    print("Loaded Wav2Vec2 transformer model successfully.")
-except Exception as e:
-    print(f"Error loading Wav2Vec2 model: {e}")
+def load_model_on_demand(model_name):
+    model_name = model_name.lower()
+    if model_name in models:
+        return True
+        
+    if model_name == 'wav2vec2':
+        try:
+            print("Loading state-of-the-art Wav2Vec2 transformer model...")
+            models["wav2vec2"] = pipeline(
+                "audio-classification", 
+                model="harshit345/xlsr-wav2vec-speech-emotion-recognition"
+            )
+            print("Loaded Wav2Vec2 successfully.")
+            return True
+        except Exception as e:
+            print(f"Error loading Wav2Vec2: {e}")
+            return False
+            
+    if model_name == 'cnn':
+        cnn_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_cnn_model.h5")
+        if os.path.exists(cnn_path):
+            try:
+                models["cnn"] = load_model(cnn_path)
+                print("Loaded CNN model successfully.")
+                return True
+            except Exception as e:
+                print(f"Error loading CNN model: {e}")
+                
+    if model_name == 'lstm':
+        lstm_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_lstm_model.h5")
+        if os.path.exists(lstm_path):
+            try:
+                models["lstm"] = load_model(lstm_path)
+                print("Loaded LSTM model successfully.")
+                return True
+            except Exception as e:
+                print(f"Error loading LSTM model: {e}")
+                
+    if model_name == 'crnn':
+        crnn_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_crnn_model.h5")
+        if os.path.exists(crnn_path):
+            try:
+                models["crnn"] = load_model(crnn_path)
+                print("Loaded CRNN model successfully.")
+                return True
+            except Exception as e:
+                print(f"Error loading CRNN model: {e}")
+                
+    if model_name == 'mlp':
+        mlp_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_model.pkl")
+        if os.path.exists(mlp_path):
+            try:
+                models["mlp"] = joblib.load(mlp_path)
+                print("Loaded MLP model successfully.")
+                return True
+            except Exception as e:
+                print(f"Error loading MLP model: {e}")
+                
+    return False
 
 # Load Label Encoder
 label_encoder_path = os.path.join(BASE_DIR, "models", "label_encoder.pkl")
@@ -83,6 +164,11 @@ if os.path.exists(label_encoder_path):
 # Fallback classes if label encoder is missing
 fallback_classes = ["neutral", "calm", "happy", "sad", "angry", "fearful", "disgust", "surprised"]
 classes = list(label_encoder.classes_) if label_encoder is not None else fallback_classes
+
+# Load standard models at startup if they exist
+for m in ['cnn', 'lstm', 'crnn', 'mlp']:
+    load_model_on_demand(m)
+
 
 
 def convert_to_wav(input_path, output_path):
@@ -167,12 +253,13 @@ def predict():
         return jsonify({"success": False, "error": "Empty filename"}), 400
         
     model_name = request.form.get('model', 'wav2vec2').lower()
+    load_model_on_demand(model_name)
     if model_name not in models:
         # Fallback to any loaded model
         if models:
             model_name = list(models.keys())[0]
         else:
-            return jsonify({"success": False, "error": "No models are loaded on the server"}), 500
+            return jsonify({"success": False, "error": f"Model {model_name} is not loaded on the server"}), 500
             
     temp_dir = tempfile.mkdtemp()
     original_ext = os.path.splitext(uploaded_file.filename)[1]
@@ -227,7 +314,7 @@ def predict():
             model = models[model_name]
             
             # Reshape features depending on the model architecture
-            if model_name in ['lstm', 'cnn']:
+            if model_name in ['lstm', 'cnn', 'crnn']:
                 model_input = np.expand_dims(np.expand_dims(features, axis=0), axis=2)
                 prediction = model.predict(model_input)[0]
             else:  # mlp
@@ -282,6 +369,7 @@ def predict_stream():
         return jsonify({"success": False, "error": "Empty filename"}), 400
         
     model_name = request.form.get('model', 'wav2vec2').lower()
+    load_model_on_demand(model_name)
     if model_name not in models:
         # Fallback
         if 'wav2vec2' in models:
@@ -335,7 +423,7 @@ def predict_stream():
                 return jsonify({"success": False, "error": "Failed to extract features"}), 400
                 
             model = models[model_name]
-            if model_name in ['lstm', 'cnn']:
+            if model_name in ['lstm', 'cnn', 'crnn']:
                 model_input = np.expand_dims(np.expand_dims(features, axis=0), axis=2)
                 prediction = model.predict(model_input)[0]
             else:
@@ -372,6 +460,81 @@ def predict_stream():
         except Exception:
             pass
 
+@app.route('/api/models_status', methods=['GET'])
+def models_status():
+    status = []
+    for model_id, meta in AVAILABLE_MODELS.items():
+        if model_id == 'wav2vec2':
+            is_downloaded = True
+        else:
+            path = os.path.join(BASE_DIR, "models", meta["filename"])
+            is_downloaded = os.path.exists(path)
+            
+        status.append({
+            "id": model_id,
+            "name": meta["name"],
+            "description": meta["description"],
+            "size": meta["size"],
+            "url": meta["url"],
+            "downloaded": is_downloaded,
+            "active": model_id in models
+        })
+    return jsonify({"success": True, "models": status})
+
+@app.route('/models/<path:filename>')
+def serve_model(filename):
+    return send_from_directory(os.path.join(BASE_DIR, "models"), filename)
+
+@app.route('/api/download_model', methods=['POST'])
+def download_model():
+    data = request.json or {}
+    model_id = data.get("model", "").lower()
+    
+    if model_id not in AVAILABLE_MODELS:
+        return jsonify({"success": False, "error": "Invalid model ID"}), 400
+        
+    meta = AVAILABLE_MODELS[model_id]
+    if model_id == 'wav2vec2':
+        success = load_model_on_demand('wav2vec2')
+        if success:
+            return jsonify({"success": True, "message": "Wav2Vec2 model loaded successfully"})
+        else:
+            return jsonify({"success": False, "error": "Failed to load Wav2Vec2"}), 500
+            
+    filename = meta["filename"]
+    dest_path = os.path.join(BASE_DIR, "models", filename)
+    
+    # Short-circuit if file already exists locally
+    if os.path.exists(dest_path):
+        print(f"Model file {filename} already exists locally. Loading...")
+        success = load_model_on_demand(model_id)
+        if success:
+            return jsonify({"success": True, "message": f"{meta['name']} loaded successfully from local storage"})
+        return jsonify({"success": False, "error": "Model files exists but failed to load"}), 500
+
+    url = meta["url"]
+    
+    try:
+        print(f"Downloading model {model_id} from {url}...")
+        response = requests.get(url, stream=True)
+        if response.status_code != 200:
+            return jsonify({"success": False, "error": f"Failed to download. HTTP status {response.status_code}"}), 500
+            
+        with open(dest_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+                    
+        print(f"Download complete. Loading model {model_id}...")
+        success = load_model_on_demand(model_id)
+        if success:
+            return jsonify({"success": True, "message": f"{meta['name']} downloaded and loaded successfully"})
+            
+        return jsonify({"success": False, "error": "Model downloaded but failed to load"}), 500
+        
+    except Exception as e:
+        print(f"Error downloading model {model_id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

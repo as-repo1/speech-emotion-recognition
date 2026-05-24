@@ -15,7 +15,60 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+import com.example.voxsense.data.AppModel
+import com.example.voxsense.data.ModelManager
+import com.example.voxsense.data.DownloadState
+
+data class ModelUIState(
+    val model: AppModel,
+    val isDownloaded: Boolean,
+    val isActive: Boolean,
+    val isDownloading: Boolean,
+    val downloadProgress: Int?
+)
+
 class MainScreenViewModel(private val dataRepository: DataRepository) : ViewModel() {
+    
+    private val modelManager = dataRepository.modelManager
+
+    private val _downloadingModelId = MutableStateFlow<String?>(null)
+    val downloadingModelId: StateFlow<String?> = _downloadingModelId.asStateFlow()
+
+    private val _downloadProgress = MutableStateFlow<Int?>(null)
+    val downloadProgress: StateFlow<Int?> = _downloadProgress.asStateFlow()
+
+    private val _downloadError = MutableStateFlow<String?>(null)
+    val downloadError: StateFlow<String?> = _downloadError.asStateFlow()
+
+    private val _modelStatesVersion = MutableStateFlow(0)
+
+    val modelStates: StateFlow<List<ModelUIState>> = combine(
+        _downloadingModelId,
+        _downloadProgress,
+        _modelStatesVersion
+    ) { downloadingId, progress, _ ->
+        ModelManager.AVAILABLE_MODELS.map { model ->
+            ModelUIState(
+                model = model,
+                isDownloaded = modelManager.isModelDownloaded(model.id),
+                isActive = modelManager.getActiveModelId() == model.id,
+                isDownloading = downloadingId == model.id,
+                downloadProgress = if (downloadingId == model.id) progress else null
+            )
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = ModelManager.AVAILABLE_MODELS.map { model ->
+            ModelUIState(
+                model = model,
+                isDownloaded = modelManager.isModelDownloaded(model.id),
+                isActive = modelManager.getActiveModelId() == model.id,
+                isDownloading = false,
+                downloadProgress = null
+            )
+        }
+    )
     
     private val _isRecording = MutableStateFlow(false)
     val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
@@ -173,6 +226,55 @@ class MainScreenViewModel(private val dataRepository: DataRepository) : ViewMode
                 delay(100)
             }
         }
+    }
+
+    fun selectModel(modelId: String) {
+        if (modelManager.isModelDownloaded(modelId)) {
+            modelManager.setActiveModelId(modelId)
+            _modelStatesVersion.value += 1
+        }
+    }
+
+    fun deleteModel(modelId: String) {
+        if (modelManager.deleteModel(modelId)) {
+            _modelStatesVersion.value += 1
+        }
+    }
+
+    fun downloadModel(modelId: String) {
+        if (_downloadingModelId.value != null) return // Only allow one download at a time
+        
+        _downloadingModelId.value = modelId
+        _downloadProgress.value = 0
+        _downloadError.value = null
+        
+        viewModelScope.launch {
+            modelManager.downloadModel(modelId).collect { state ->
+                when (state) {
+                    is DownloadState.Idle -> {}
+                    is DownloadState.Loading -> {
+                        _downloadProgress.value = 0
+                    }
+                    is DownloadState.Progress -> {
+                        _downloadProgress.value = state.percentage
+                    }
+                    is DownloadState.Success -> {
+                        _downloadingModelId.value = null
+                        _downloadProgress.value = null
+                        _modelStatesVersion.value += 1
+                    }
+                    is DownloadState.Error -> {
+                        _downloadingModelId.value = null
+                        _downloadProgress.value = null
+                        _downloadError.value = state.message
+                    }
+                }
+            }
+        }
+    }
+    
+    fun clearDownloadError() {
+        _downloadError.value = null
     }
 
     private fun stopTimer() {

@@ -34,6 +34,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.voxsense.data.DefaultDataRepository
 import com.example.voxsense.data.EmotionPrediction
+import com.example.voxsense.data.ModelManager
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.BorderStroke
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -76,6 +81,8 @@ fun MainScreen(
     val isProcessing by viewModel.isProcessing.collectAsStateWithLifecycle()
     val amplitude by viewModel.currentAmplitude.collectAsStateWithLifecycle()
     val duration by viewModel.recordingDuration.collectAsStateWithLifecycle()
+    val modelStates by viewModel.modelStates.collectAsStateWithLifecycle()
+    val downloadError by viewModel.downloadError.collectAsStateWithLifecycle()
 
     var hasMicPermission by remember {
         mutableStateOf(
@@ -118,6 +125,12 @@ fun MainScreen(
                     usePreEmphasis = successState.usePreEmphasis,
                     useNoiseGate = successState.useNoiseGate,
                     recordingLimitSeconds = successState.recordingLimitSeconds,
+                    modelStates = modelStates,
+                    downloadError = downloadError,
+                    onSelectModel = { viewModel.selectModel(it) },
+                    onDeleteModel = { viewModel.deleteModel(it) },
+                    onDownloadModel = { viewModel.downloadModel(it) },
+                    onClearDownloadError = { viewModel.clearDownloadError() },
                     onRequestPermission = {
                         permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                     },
@@ -171,6 +184,12 @@ fun MainScreenContent(
     usePreEmphasis: Boolean,
     useNoiseGate: Boolean,
     recordingLimitSeconds: Int?,
+    modelStates: List<ModelUIState>,
+    downloadError: String?,
+    onSelectModel: (String) -> Unit,
+    onDeleteModel: (String) -> Unit,
+    onDownloadModel: (String) -> Unit,
+    onClearDownloadError: () -> Unit,
     onRequestPermission: () -> Unit,
     onRecordToggle: () -> Unit,
     onClearHistory: () -> Unit,
@@ -408,6 +427,170 @@ fun MainScreenContent(
                                     modifier = Modifier.weight(1f)
                                 )
                                 Spacer(modifier = Modifier.weight(1f)) // Padding
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Open Source Model Downloader Card
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                NordCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Model Management",
+                            color = Nord5,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Download advanced neural networks directly from open sources to local storage.",
+                            color = Nord4.copy(alpha = 0.6f),
+                            fontSize = 11.sp
+                        )
+
+                        if (downloadError != null) {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Nord11.copy(alpha = 0.15f)),
+                                border = BorderStroke(1.dp, Nord11),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp).fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = downloadError,
+                                        color = Nord11,
+                                        fontSize = 11.sp,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    IconButton(
+                                        onClick = onClearDownloadError,
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Clear Error",
+                                            tint = Nord11,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        modelStates.forEach { state ->
+                            val model = state.model
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, if (state.isActive) Nord8 else Nord2, RoundedCornerShape(8.dp))
+                                    .background(if (state.isActive) Nord8.copy(alpha = 0.05f) else Color.Transparent, RoundedCornerShape(8.dp))
+                                    .padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = model.name,
+                                            color = if (state.isActive) Nord8 else Nord4,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = model.size,
+                                            color = Nord7,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier
+                                                .background(Nord7.copy(alpha = 0.1f), RoundedCornerShape(3.dp))
+                                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = model.description,
+                                        color = Nord4.copy(alpha = 0.6f),
+                                        fontSize = 10.sp
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                when {
+                                    state.isDownloading -> {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            CircularProgressIndicator(
+                                                progress = (state.downloadProgress ?: 0) / 100f,
+                                                color = Nord8,
+                                                modifier = Modifier.size(20.dp),
+                                                strokeWidth = 2.dp
+                                            )
+                                            Text(
+                                                text = "${state.downloadProgress ?: 0}%",
+                                                color = Nord4,
+                                                fontSize = 9.sp,
+                                                modifier = Modifier.padding(top = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    state.isDownloaded -> {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            if (state.isActive) {
+                                                Text(
+                                                    text = "Active",
+                                                    color = Nord14,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier
+                                                        .border(1.dp, Nord14, RoundedCornerShape(4.dp))
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            } else {
+                                                Button(
+                                                    onClick = { onSelectModel(model.id) },
+                                                    colors = ButtonDefaults.buttonColors(containerColor = Nord8),
+                                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                                    modifier = Modifier.height(28.dp)
+                                                ) {
+                                                    Text("Activate", color = Nord0, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                                }
+                                                if (model.id != "cnn") {
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    IconButton(
+                                                        onClick = { onDeleteModel(model.id) },
+                                                        modifier = Modifier.size(28.dp)
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Delete,
+                                                            contentDescription = "Delete model",
+                                                            tint = Nord11,
+                                                            modifier = Modifier.size(16.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else -> {
+                                        Button(
+                                            onClick = { onDownloadModel(model.id) },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Nord3),
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                            modifier = Modifier.height(28.dp)
+                                        ) {
+                                            Text("Download", color = Nord6, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

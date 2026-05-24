@@ -42,6 +42,10 @@
                             <span class="pill-title">Wav2Vec2</span>
                             <span class="pill-desc">SOTA Transformer</span>
                         </button>
+                        <button class="model-pill" id="btn-model-crnn" data-model="crnn">
+                            <span class="pill-title">CRNN</span>
+                            <span class="pill-desc">Conv + Recurrent</span>
+                        </button>
                         <button class="model-pill" id="btn-model-lstm" data-model="lstm">
                             <span class="pill-title">LSTM</span>
                             <span class="pill-desc">Recurrent Network</span>
@@ -54,6 +58,17 @@
                             <span class="pill-title">MLP</span>
                             <span class="pill-desc">Multi-Layer Baseline</span>
                         </button>
+                    </div>
+                </div>
+
+                <!-- Model Manager Card -->
+                <div class="glass-card card-model-manager" id="model-manager-card">
+                    <h2 class="card-title"><i class="fa-solid fa-cloud-arrow-down"></i> Device Model Downloader</h2>
+                    <p class="card-subtitle">Download speech emotion models directly from open sources to local storage</p>
+                    <div class="model-list" id="web-model-list">
+                        <div class="model-loading-placeholder">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Querying model statuses...
+                        </div>
                     </div>
                 </div>
 

@@ -189,6 +189,7 @@ graph TD
    - **Noise Gate**: Attenuates background noise and hum below an amplitude threshold of $0.015$.
    - **Timed Limits**: Configurable recording timers (Manual Stop, 3s, 5s, or 10s) with automated inference execution.
    - **Tracked Emotions Checklist (Multi-Select)**: A checklist allowing users to selectively filter which emotion progress bars are rendered on the results card.
+   - **Dynamic Model Manager**: Enables dynamic model downloads (TFLite files) directly within the application, allowing users to toggle and activate their preferred model (CNN, LSTM, CRNN). It supports a high-speed local development connection over USB by running `adb reverse tcp:5000 tcp:5000` to fetch models directly from the workspace Flask server, and automatically falls back to raw GitHub URLs if the local developer server is unreachable.
 
 ### Build and Run Android App
 

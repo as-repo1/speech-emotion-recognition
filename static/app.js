@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initRecordingZone();
     initHistory();
     checkBackendHealth();
+    loadModelStatuses();
 });
 
 // Show floating notification
@@ -60,7 +61,7 @@ async function checkBackendHealth() {
         
         // Disable model buttons if model weights didn't load on backend
         const loadedModels = data.models_loaded || [];
-        ['wav2vec2', 'lstm', 'cnn', 'mlp'].forEach(m => {
+        ['wav2vec2', 'crnn', 'lstm', 'cnn', 'mlp'].forEach(m => {
             const btn = document.getElementById(`btn-model-${m}`);
             if (btn && !loadedModels.includes(m)) {
                 btn.style.opacity = '0.4';
@@ -70,6 +71,106 @@ async function checkBackendHealth() {
         });
     } catch (err) {
         showToast('Unable to connect to backend engine. Run "python server.py" first.', 'error');
+    }
+}
+
+// Load Model Downloader Statuses
+async function loadModelStatuses() {
+    try {
+        const response = await fetch('/api/models_status');
+        if (!response.ok) throw new Error('Failed to fetch model statuses');
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Server reported failure');
+        
+        const listContainer = document.getElementById('web-model-list');
+        if (!listContainer) return;
+        listContainer.innerHTML = '';
+        
+        data.models.forEach(model => {
+            const item = document.createElement('div');
+            item.className = 'model-manager-item';
+            
+            const info = document.createElement('div');
+            info.className = 'model-info';
+            info.innerHTML = `
+                <div class="model-name-row">
+                    <span class="model-name">${model.name}</span>
+                    <span class="model-size">${model.size}</span>
+                </div>
+                <div class="model-desc">${model.description}</div>
+            `;
+            
+            const actions = document.createElement('div');
+            actions.className = 'model-actions';
+            
+            if (model.id === 'wav2vec2') {
+                actions.innerHTML = `<span class="badge badge-active"><i class="fa-solid fa-cloud"></i> Hugging Face</span>`;
+            } else if (model.downloaded) {
+                actions.innerHTML = `
+                    <span class="badge badge-downloaded"><i class="fa-solid fa-circle-check"></i> Ready</span>
+                    ${model.active ? '<span class="badge badge-active">Active</span>' : ''}
+                `;
+            } else {
+                const dlBtn = document.createElement('button');
+                dlBtn.className = 'btn btn-download-model';
+                dlBtn.id = `btn-dl-${model.id}`;
+                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> Download`;
+                dlBtn.onclick = () => downloadModelToServer(model.id);
+                actions.appendChild(dlBtn);
+            }
+            
+            item.appendChild(info);
+            item.appendChild(actions);
+            listContainer.appendChild(item);
+            
+            // Update the pill button state in the main model selector
+            const pillBtn = document.getElementById(`btn-model-${model.id}`);
+            if (pillBtn) {
+                if (model.downloaded || model.id === 'wav2vec2') {
+                    pillBtn.style.opacity = '1';
+                    pillBtn.style.pointerEvents = 'auto';
+                    pillBtn.title = '';
+                } else {
+                    pillBtn.style.opacity = '0.5';
+                    pillBtn.title = 'Need to download model first';
+                }
+            }
+        });
+    } catch (err) {
+        console.error('Error loading model statuses:', err);
+    }
+}
+
+// Download Model from Open Source to Local Server
+async function downloadModelToServer(modelId) {
+    const btn = document.getElementById(`btn-dl-${modelId}`);
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Downloading...`;
+    }
+    
+    try {
+        showToast(`Starting download for ${modelId} from GitHub Releases/Repository...`, 'success');
+        const response = await fetch('/api/download_model', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: modelId })
+        });
+        
+        const data = await response.json();
+        if (response.ok && data.success) {
+            showToast(`${modelId.toUpperCase()} model downloaded and loaded successfully!`, 'success');
+            await loadModelStatuses();
+            await checkBackendHealth();
+        } else {
+            throw new Error(data.error || 'Failed to download');
+        }
+    } catch (err) {
+        showToast(`Download failed: ${err.message}`, 'error');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-download"></i> Download`;
+        }
     }
 }
 
