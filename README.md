@@ -152,6 +152,52 @@ Docker simplifies environment setup by automatically encapsulating system packag
 
 ---
 
+## 📱 Local Android Application (VoxSense)
+
+VoxSense includes a fully local Android application in the `android-app/` directory. It implements Speech Emotion Recognition entirely on-device, requiring **no internet connection or external server requests**.
+
+### How It Works (Android Pipeline)
+
+```mermaid
+graph TD
+    A[Microphone input] -->|AudioRecord 48kHz PCM| B[Raw Audio Buffer]
+    B -->|Hanning Window, FFT| C[Power Spectrogram]
+    C -->|128-band Slaney Mel Filter| D[Mel Spectrogram]
+    D -->|Log Compression, DCT-II| E[40 MFCC Coefficients]
+    E -->|Time Averaging| F[40-dim Feature Vector]
+    F -->|Reshape to 1,40,1| G[TensorFlow Lite CNN Classifier]
+    G -->|On-device Inference| H[Local UI Card & Probability Bars]
+```
+
+1. **Mic Capture**: Records raw 16-bit mono PCM audio at **48,000 Hz** (to match the native sample rate of the RAVDESS training set) using the standard Android `AudioRecord` API.
+2. **On-Device Feature Extraction**:
+   - Breaks audio into overlapping frames with a periodic Hanning window (frame size `2048`, hop size `512`).
+   - A custom Kotlin `MfccExtractor` calculates the power spectrum via an in-place Cooley-Tukey Radix-2 FFT.
+   - It computes the energy in **128 Mel bands** using a Slaney-normalized Mel scale filterbank.
+   - Log-compression is applied to convert the energy to decibels.
+   - An orthogonal Discrete Cosine Transform (DCT-II) is computed to extract **40 MFCCs** per frame, which are then averaged over the entire recording duration to yield a single 40-dimensional feature vector.
+3. **On-Device Inference**:
+   - The feature vector is formatted into a `[1, 40, 1]` tensor.
+   - The TensorFlow Lite interpreter runs `speech_emotion_recognition_cnn_model.tflite` to predict emotion probabilities.
+   - Class indices correspond to the alphabetical sorted labels: `['angry', 'calm', 'disgust', 'fearful', 'happy', 'neutral', 'sad', 'surprised']`.
+4. **Jetpack Compose UI**: Features a beautiful glassmorphism dark theme, an animated waveform visualizer modulated by live recording amplitude, and color-coded progress bars for each emotion.
+
+### Build and Run Android App
+
+1. **Prerequisites**: Ensure you have Android SDK/NDK path configured (typically in `android-app/local.properties` as `sdk.dir=/path/to/Android/Sdk`).
+2. **Build debug APK**:
+   ```bash
+   cd android-app
+   ./gradlew assembleDebug
+   ```
+3. **Deploy to Device**:
+   Ensure your Android device or emulator is connected via ADB, then run:
+   ```bash
+   ./gradlew installDebug
+   ```
+
+---
+
 ## 🔌 API Reference
 
 ### 1. Health Status
