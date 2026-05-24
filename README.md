@@ -180,7 +180,12 @@ graph TD
    - The feature vector is formatted into a `[1, 40, 1]` tensor.
    - The TensorFlow Lite interpreter runs `speech_emotion_recognition_cnn_model.tflite` to predict emotion probabilities.
    - Class indices correspond to the alphabetical sorted labels: `['angry', 'calm', 'disgust', 'fearful', 'happy', 'neutral', 'sad', 'surprised']`.
-4. **Jetpack Compose UI**: Features a beautiful glassmorphism dark theme, an animated waveform visualizer modulated by live recording amplitude, and color-coded progress bars for each emotion.
+4. **Jetpack Compose UI**: Styled with an elegant **Nord theme** (Polar Night background, Snow Storm typography, Frost accent inputs, and Aurora paralinguistic color mappings). Renders an animated waveform visualizer modulated by live microphone amplitude, and color-coded progress bars.
+5. **Acoustic & UI Customizations (Multiple Options)**:
+   - **Pre-emphasis Filter**: Boosts high-frequency bands ($y[n] = x[n] - 0.97 \cdot x[n-1]$) to highlight vocal formants.
+   - **Noise Gate**: Attenuates background noise and hum below an amplitude threshold of $0.015$.
+   - **Timed Limits**: Configurable recording timers (Manual Stop, 3s, 5s, or 10s) with automated inference execution.
+   - **Tracked Emotions Checklist (Multi-Select)**: A checklist allowing users to selectively filter which emotion progress bars are rendered on the results card.
 
 ### Build and Run Android App
 
