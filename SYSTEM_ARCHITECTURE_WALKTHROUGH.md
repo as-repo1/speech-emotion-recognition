@@ -148,10 +148,11 @@ Wraps the TensorFlow Lite interpreter:
   - `isProcessing`: Indicates if the MFCC extractor or TFLite engine is running on a background thread.
 - **Coroutines & Threads**: Long-running DSP operations (MFCC extraction) and TFLite runs are executed on `Dispatchers.Default` or `Dispatchers.IO` using Kotlin coroutines to prevent UI blocking or frame drops.
 - **Interactive UI**:
-  - Displays a title header with a dynamic color gradient.
-  - Waveform visualizer: A custom Compose Canvas that draws intersecting sine waves. When recording is active, a coroutine animates the wave phase, and its vertical scaling is driven by real-time microphone amplitude updates.
-  - Horizontal progress bars: Renders custom-colored progress indicators for all 8 emotions.
-  - Dynamic permission launcher: Prompts the user for `Manifest.permission.RECORD_AUDIO` when they tap the record button if permission has not yet been granted.
+  - **Material 3 Dynamic Color Theming**: Styled using standard `MaterialTheme.colorScheme` tokens (background, surfaceVariant, outline, primary, secondary, error) to support automated light/dark mode transitions and Android 12+ dynamic wallpaper colors.
+  - **Processing Dialog**: A fullscreen modal dialog (`CircularProgressIndicator` with status text "Analyzing Speech...") is triggered when `isProcessing` is active, intercepting back gestures to protect calculation flow.
+  - **Waveform Visualizer**: A custom Compose Canvas that draws intersecting sine waves. When recording is active, a coroutine animates the wave phase, and its vertical scaling is driven by real-time microphone amplitude updates.
+  - **Horizontal Progress Bars**: Renders custom-colored progress indicators for all 8 emotions.
+  - **Dynamic Permission Launcher**: Prompts the user for `Manifest.permission.RECORD_AUDIO` when they tap the record button if permission has not yet been granted.
 
 ---
 

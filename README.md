@@ -155,7 +155,7 @@ Docker simplifies environment setup by automatically encapsulating system packag
 ## 📱 Local Android Application (VoxSense)
 
 > [!TIP]
-> **Direct Download**: Get the pre-built application binary directly: **[voxsense-v1.0.0.apk](voxsense-v1.0.0.apk)**. Copy it to your Android device to install and use it immediately without setting up compiler tools.
+> **Direct Download**: Get the pre-built application binary directly: **[voxsense-v1.0.1.apk](voxsense-v1.0.1.apk)**. Copy it to your Android device to install and use it immediately without setting up compiler tools.
 
 VoxSense includes a fully local Android application in the `android-app/` directory. It implements Speech Emotion Recognition entirely on-device, requiring **no internet connection or external server requests**.
 
@@ -183,7 +183,7 @@ graph TD
    - The feature vector is formatted into a `[1, 40, 1]` tensor.
    - The TensorFlow Lite interpreter runs `speech_emotion_recognition_cnn_model.tflite` to predict emotion probabilities.
    - Class indices correspond to the alphabetical sorted labels: `['angry', 'calm', 'disgust', 'fearful', 'happy', 'neutral', 'sad', 'surprised']`.
-4. **Jetpack Compose UI**: Styled with an elegant **Nord theme** (Polar Night background, Snow Storm typography, Frost accent inputs, and Aurora paralinguistic color mappings). Renders an animated waveform visualizer modulated by live microphone amplitude, and color-coded progress bars.
+4. **Jetpack Compose UI**: Styled with modern **Material 3 (M3) dynamic color theming** (automatically adapting to system light/dark mode and Android 12+ wallpaper colors, mapping to custom paralinguistic color palettes for visual emotion feedback). It features a fullscreen loading dialog during voice processing, an animated waveform visualizer modulated by live microphone amplitude, and color-coded progress bars.
 5. **Acoustic & UI Customizations (Multiple Options)**:
    - **Pre-emphasis Filter**: Boosts high-frequency bands ($y[n] = x[n] - 0.97 \cdot x[n-1]$) to highlight vocal formants.
    - **Noise Gate**: Attenuates background noise and hum below an amplitude threshold of $0.015$.
