@@ -140,15 +140,41 @@ You must have `ffmpeg` installed on your machine to handle audio format transcod
 
 ---
 
-### Run with Docker
+### 🐳 Run with Docker
 
-Docker simplifies environment setup by automatically encapsulating system packages like FFmpeg and Libsndfile.
+Docker simplifies environment setup by automatically encapsulating system packages like FFmpeg and Libsndfile for audio transcoding and feature extraction.
 
-1. **Build and Start Container**:
+#### ⚡ Performance & Size Optimizations
+* **Lightweight CPU-Only Footprint**: The image dynamically replaces standard TensorFlow with `tensorflow-cpu` and installs CPU-only `torch` from the official PyTorch CPU wheel repository. This keeps the final container image under 2 GB and avoids downloading massive GPU dependencies.
+* **Optimized Build Context**: A `.dockerignore` file prevents the 3.3 GB local `.venv` and mobile gradle files (`android-app/`) from being sent to the Docker daemon, ensuring builds complete in minutes.
+* **Persistent Model Storage**: The container mounts the host's `models/` directory. Any pre-trained models downloaded dynamically at runtime (e.g. Wav2Vec2) are saved back to your host machine's directory, persisting across container restarts.
+* **Automatic Health Monitoring**: An internal, dependency-free Python healthcheck monitors `/api/health` to confirm that the Flask app has loaded the models and is ready to handle requests.
+
+#### 🛠️ Usage Instructions
+
+1. **Build and Start Container (Detached Mode)**:
    ```bash
-   docker-compose up --build
+   docker compose up --build -d
    ```
-2. **Access Web App**: Open `http://localhost:5000` in your web browser.
+
+2. **Verify Container Health**:
+   Wait a few seconds for Flask to boot and load the neural networks, then run:
+   ```bash
+   docker compose ps
+   ```
+   *You should see the container status as `Up (healthy)`.*
+
+3. **Check Application Logs**:
+   ```bash
+   docker compose logs -f
+   ```
+
+4. **Access Web App**: Open `http://localhost:5000` in your web browser.
+
+5. **Stop Container**:
+   ```bash
+   docker compose down
+   ```
 
 ---
 
