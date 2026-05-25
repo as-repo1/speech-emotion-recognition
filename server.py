@@ -6,9 +6,10 @@ import soundfile as sf
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import joblib
-from tensorflow.keras.models import load_model
+import onnxruntime as ort
 from pydub import AudioSegment
 from transformers import pipeline
+import torch
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app)  # Enable CORS for all routes
@@ -100,9 +101,13 @@ def load_model_on_demand(model_name):
     if model_name == 'wav2vec2':
         try:
             print("Loading state-of-the-art Wav2Vec2 transformer model...")
+            # Auto-detect CUDA GPU support
+            device = 0 if torch.cuda.is_available() else -1
+            print(f"Using device: {'GPU (cuda)' if device == 0 else 'CPU'}")
             models["wav2vec2"] = pipeline(
                 "audio-classification", 
-                model="harshit345/xlsr-wav2vec-speech-emotion-recognition"
+                model="harshit345/xlsr-wav2vec-speech-emotion-recognition",
+                device=device
             )
             print("Loaded Wav2Vec2 successfully.")
             return True
@@ -111,31 +116,56 @@ def load_model_on_demand(model_name):
             return False
             
     if model_name == 'cnn':
-        cnn_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_cnn_model.h5")
+        cnn_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_cnn_model.onnx")
+        # Fallback to .h5 if .onnx is missing
+        if not os.path.exists(cnn_path):
+            cnn_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_cnn_model.h5")
+        
         if os.path.exists(cnn_path):
             try:
-                models["cnn"] = load_model(cnn_path)
-                print("Loaded CNN model successfully.")
+                if cnn_path.endswith('.onnx'):
+                    models["cnn"] = ort.InferenceSession(cnn_path)
+                    print("Loaded CNN model successfully using ONNX Runtime.")
+                else:
+                    from tensorflow.keras.models import load_model
+                    models["cnn"] = load_model(cnn_path)
+                    print("Loaded CNN model successfully using Keras.")
                 return True
             except Exception as e:
                 print(f"Error loading CNN model: {e}")
                 
     if model_name == 'lstm':
-        lstm_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_lstm_model.h5")
+        lstm_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_lstm_model.onnx")
+        if not os.path.exists(lstm_path):
+            lstm_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_lstm_model.h5")
+            
         if os.path.exists(lstm_path):
             try:
-                models["lstm"] = load_model(lstm_path)
-                print("Loaded LSTM model successfully.")
+                if lstm_path.endswith('.onnx'):
+                    models["lstm"] = ort.InferenceSession(lstm_path)
+                    print("Loaded LSTM model successfully using ONNX Runtime.")
+                else:
+                    from tensorflow.keras.models import load_model
+                    models["lstm"] = load_model(lstm_path)
+                    print("Loaded LSTM model successfully using Keras.")
                 return True
             except Exception as e:
                 print(f"Error loading LSTM model: {e}")
                 
     if model_name == 'crnn':
-        crnn_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_crnn_model.h5")
+        crnn_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_crnn_model.onnx")
+        if not os.path.exists(crnn_path):
+            crnn_path = os.path.join(BASE_DIR, "models", "speech_emotion_recognition_crnn_model.h5")
+            
         if os.path.exists(crnn_path):
             try:
-                models["crnn"] = load_model(crnn_path)
-                print("Loaded CRNN model successfully.")
+                if crnn_path.endswith('.onnx'):
+                    models["crnn"] = ort.InferenceSession(crnn_path)
+                    print("Loaded CRNN model successfully using ONNX Runtime.")
+                else:
+                    from tensorflow.keras.models import load_model
+                    models["crnn"] = load_model(crnn_path)
+                    print("Loaded CRNN model successfully using Keras.")
                 return True
             except Exception as e:
                 print(f"Error loading CRNN model: {e}")
@@ -315,8 +345,12 @@ def predict():
             
             # Reshape features depending on the model architecture
             if model_name in ['lstm', 'cnn', 'crnn']:
-                model_input = np.expand_dims(np.expand_dims(features, axis=0), axis=2)
-                prediction = model.predict(model_input)[0]
+                model_input = np.expand_dims(np.expand_dims(features, axis=0), axis=2).astype(np.float32)
+                if isinstance(model, ort.InferenceSession):
+                    input_name = model.get_inputs()[0].name
+                    prediction = model.run(None, {input_name: model_input})[0][0]
+                else:
+                    prediction = model.predict(model_input)[0]
             else:  # mlp
                 model_input = features.reshape(1, -1)
                 prediction = model.predict_proba(model_input)[0]
@@ -424,8 +458,12 @@ def predict_stream():
                 
             model = models[model_name]
             if model_name in ['lstm', 'cnn', 'crnn']:
-                model_input = np.expand_dims(np.expand_dims(features, axis=0), axis=2)
-                prediction = model.predict(model_input)[0]
+                model_input = np.expand_dims(np.expand_dims(features, axis=0), axis=2).astype(np.float32)
+                if isinstance(model, ort.InferenceSession):
+                    input_name = model.get_inputs()[0].name
+                    prediction = model.run(None, {input_name: model_input})[0][0]
+                else:
+                    prediction = model.predict(model_input)[0]
             else:
                 model_input = features.reshape(1, -1)
                 prediction = model.predict_proba(model_input)[0]
