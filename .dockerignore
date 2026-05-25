@@ -1,0 +1,29 @@
+# Git and build environment files
+.git
+.gitignore
+.venv
+venv
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Development / IDE folders
+.vscode/
+.idea/
+
+# Android app directory and artifacts
+android-app/
+voxsense-v1.0.1.apk
+*.apk
+
+# Notebooks and experimental files
+notebooks/
+legacy/
+
+# Models only used for Mobile/ONNX execution (web app uses .h5 and .pkl)
+models/*.tflite
+models/*.onnx
