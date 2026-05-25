@@ -123,6 +123,7 @@ fun MainScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundGradient)
+            .safeDrawingPadding()
             .padding(16.dp)
     ) {
         when (state) {
